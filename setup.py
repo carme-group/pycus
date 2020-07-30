@@ -1,7 +1,7 @@
 import setuptools
 
-with open('README.rst') as fp:
-   long_description = fp.read()
+with open("README.rst") as fp:
+    long_description = fp.read()
 
 setuptools.setup(
     name="pycus",
@@ -16,8 +16,6 @@ setuptools.setup(
     package_dir={"": "src"},
     install_requires=["jupyterlab", "face"],
     extras_require=dict(
-        test=["pytest", "coverage"],
-        lint=["black", "flake8", "mypy"],
-        doc=["sphinx"],
+        test=["pytest", "coverage"], lint=["black", "flake8", "mypy"], doc=["sphinx"],
     ),
 )

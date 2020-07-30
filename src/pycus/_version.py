@@ -7,5 +7,5 @@ Provides picus version information.
 
 from incremental import Version
 
-__version__ = Version('picus', 20, 7, 0)
+__version__ = Version("picus", 20, 7, 0)
 __all__ = ["__version__"]
