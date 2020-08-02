@@ -65,4 +65,4 @@ def docs(session):
         sphinx[0:1] = ["sphinx-autobuild", "--open-browser"]
 
     session.cd("doc")
-    session.run(sphinx_cmd, *sphinx_args)
+    session.run(*sphinx)
