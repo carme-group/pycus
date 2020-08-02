@@ -3,6 +3,7 @@ from pycus import commands
 from unittest import mock
 import io
 
+
 def test_happy_path_add():
     runner = mock.MagicMock()
     runner.return_value.returncode = 0
@@ -13,21 +14,26 @@ def test_happy_path_add():
         commands.add(environment, name, jupyter, runner)
     output = new_stdout.getvalue().split()
     assert environment in output
-    assert name in output[output.index(environment):]
-    assert jupyter in output[output.index(name):]
+    assert name in output[output.index(environment) :]
+    assert jupyter in output[output.index(name) :]
     assert len(runner.call_args_list) == 3
     install, ipykernel, jupyter = runner.call_args_list
     [args], kwargs = install
     assert " ".join(args) == "/path/to/env/bin/python -m pip install ipykernel"
     [args], kwargs = ipykernel
-    assert " ".join(args) == ("/path/to/env/bin/python -m ipykernel install "
-                              "--name an-awesome-env-venv "
-                              "--display-name an-awesome-env "
-                              "--prefix /path/to/env")
+    assert " ".join(args) == (
+        "/path/to/env/bin/python -m ipykernel install "
+        "--name an-awesome-env-venv "
+        "--display-name an-awesome-env "
+        "--prefix /path/to/env"
+    )
     [args], kwargs = jupyter
-    assert " ".join(args) == ("/path/to/jupyter kernelspec install "
-                              "/path/to/env/share/jupyter/kernels/"
-                              "an-awesome-env-venv --sys-prefix")
+    assert " ".join(args) == (
+        "/path/to/jupyter kernelspec install "
+        "/path/to/env/share/jupyter/kernels/"
+        "an-awesome-env-venv --sys-prefix"
+    )
+
 
 def test_bad_env_add():
     runner = mock.MagicMock(name="runner")
@@ -47,6 +53,7 @@ def test_bad_env_add():
     assert runner.return_value.stderr.strip() == lines.pop(0)
     assert lines == []
 
+
 def test_happy_path_add_default_name():
     runner = mock.MagicMock()
     runner.return_value.returncode = 0
@@ -57,9 +64,10 @@ def test_happy_path_add_default_name():
         commands.add(environment, None, jupyter, runner)
     output = new_stdout.getvalue().split()
     assert environment in output
-    assert name in output[output.index(environment):]
-    assert jupyter in output[output.index(name):]
+    assert name in output[output.index(environment) :]
+    assert jupyter in output[output.index(name) :]
     assert len(runner.call_args_list) == 3
+
 
 def test_happy_path_add_default_name_trailing_slash():
     runner = mock.MagicMock()
@@ -71,9 +79,10 @@ def test_happy_path_add_default_name_trailing_slash():
         commands.add(environment, None, jupyter, runner)
     output = new_stdout.getvalue().split()
     assert environment in output
-    assert name in output[output.index(environment):]
-    assert jupyter in output[output.index(name):]
+    assert name in output[output.index(environment) :]
+    assert jupyter in output[output.index(name) :]
     assert len(runner.call_args_list) == 3
+
 
 def test_happy_path_add_default_jupyter():
     runner = mock.MagicMock()
@@ -85,6 +94,6 @@ def test_happy_path_add_default_jupyter():
         commands.add(environment, None, None, runner)
     output = new_stdout.getvalue().split()
     assert environment in output
-    assert name in output[output.index(environment):]
-    assert jupyter in output[output.index(name):]
+    assert name in output[output.index(environment) :]
+    assert jupyter in output[output.index(name) :]
     assert len(runner.call_args_list) == 3

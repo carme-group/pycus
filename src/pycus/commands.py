@@ -70,7 +70,7 @@ def add(environment, name, jupyter, runner):
 
 
 @face.face_middleware(provides=["runner"])
-def runner_mw(next_): # pragma: no cover
+def runner_mw(next_):  # pragma: no cover
     return next_(
         runner=functools.partial(subprocess.run, capture_output=True, text=True)
     )
@@ -83,7 +83,7 @@ add_cmd.add("--jupyter")
 add_cmd.add("--name")
 
 
-def _need_subcommand(): # pragma: no cover
+def _need_subcommand():  # pragma: no cover
     raise face.UsageError("missing subcommand")
 
 
