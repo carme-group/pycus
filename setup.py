@@ -14,7 +14,7 @@ setuptools.setup(
     author_email="moshez@zadka.club",
     packages=setuptools.find_packages(where="src"),
     package_dir={"": "src"},
-    install_requires=["jupyterlab", "face"],
+    install_requires=["incremental", "jupyterlab", "face"],
     extras_require=dict(
         test=["pytest", "coverage"], lint=["black", "flake8", "mypy"], doc=["sphinx"],
     ),

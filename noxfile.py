@@ -16,6 +16,7 @@ def tests(session):
         "coverage",
         "run",
         "--source=src/pycus",
+        "--omit=**/__main__.py",
         "-m",
         "pytest",
         *tests,
