@@ -19,6 +19,6 @@ setuptools.setup(
         test=["pytest", "coverage"], lint=["black", "flake8", "mypy"], doc=["sphinx"],
     ),
     entry_points=dict(
-        console_scripts=['jupyter-pycus=pycus.commands:main_command.run'],
+        console_scripts=["jupyter-pycus=pycus.commands:main_command.run"],
     ),
 )
