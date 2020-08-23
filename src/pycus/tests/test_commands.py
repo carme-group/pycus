@@ -74,7 +74,6 @@ class TestCommands(unittest.TestCase):
         runner = mock.MagicMock()
         runner.return_value.returncode = 0
         environment = "/path/to/best-env"
-        name = "best-env"
         jupyter = "/path/to/jupyter"
         with mock.patch("sys.stdout", new=io.StringIO()) as new_stdout:
             commands.add(environment, None, jupyter, runner)
