@@ -10,15 +10,15 @@ nox.options.envdir = "build/nox"
 def tests(session):
     """Run test suite with pytest."""
     tmpdir = session.create_tmp()
-    session.install("-e", ".[test]")
-    tests = session.posargs or ["src/pycus/tests"]
+    session.install(".[test]")
+    tests = session.posargs or ["pycus.tests"]
     session.run(
         "coverage",
         "run",
-        "--source=src/pycus",
+        "--source=pycus",
         "--omit=**/__main__.py",
         "-m",
-        "pytest",
+        "virtue",
         *tests,
         env=dict(COVERAGE_FILE=os.path.join(tmpdir, "coverage")),
     )

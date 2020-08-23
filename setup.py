@@ -16,9 +16,11 @@ setuptools.setup(
     package_dir={"": "src"},
     install_requires=["incremental", "jupyterlab", "face"],
     extras_require=dict(
-        test=["pytest", "coverage"], lint=["black", "flake8", "mypy"], doc=["sphinx"],
+        test=["virtue", "pyhamcrest", "coverage"],
+        lint=["black", "flake8", "mypy"],
+        doc=["sphinx"],
     ),
     entry_points=dict(
-        console_scripts=['jupyter-pycus=pycus.commands:main_command.run'],
+        console_scripts=["jupyter-pycus=pycus.commands:main_command.run"],
     ),
 )
