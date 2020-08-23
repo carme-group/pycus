@@ -1,22 +1,39 @@
+from __future__ import annotations
+
 import functools
 import os
 import subprocess
 import sys
 
 import face
+from typing import Sequence, Any
+from typing_extensions import Protocol
 
 
 class _ProcessHopesShattered(Exception):
     pass
 
 
-def _optimistic_run(runner, description, arguments):
+class _CompletedProcess(Protocol):
+    returncode: int
+    stdout: str
+    stderr: str
+
+
+class _Runner(Protocol):
+    def __call__(self, args: Sequence[str]) -> _CompletedProcess:
+        "Run"
+
+
+def _optimistic_run(
+    runner: _Runner, description: str, arguments: Sequence[str],
+) -> None:
     result = runner(arguments)
     if result.returncode != 0:
         raise _ProcessHopesShattered(description, result)
 
 
-def add(environment, name, jupyter, runner):
+def add(environment: str, name: str, jupyter: str, runner: _Runner) -> None:
     """
     Add a virtual environment
     """
@@ -69,8 +86,13 @@ def add(environment, name, jupyter, runner):
         print(f"✅ Added {environment} as {name} to {jupyter}")
 
 
+class _Middleware(Protocol):
+    def __call__(self, *args: Any, **kwargs: Any) -> _Middleware:
+        "next"
+
+
 @face.face_middleware(provides=["runner"])
-def runner_mw(next_):  # pragma: no cover
+def runner_mw(next_: _Middleware) -> _Middleware:  # pragma: no cover
     return next_(
         runner=functools.partial(subprocess.run, capture_output=True, text=True)
     )
@@ -83,7 +105,7 @@ add_cmd.add("--jupyter")
 add_cmd.add("--name")
 
 
-def _need_subcommand():  # pragma: no cover
+def _need_subcommand() -> None:  # pragma: no cover
     raise face.UsageError("missing subcommand")
 
 

@@ -1,3 +1,4 @@
+# type: ignore
 from pycus import commands
 
 from unittest import mock

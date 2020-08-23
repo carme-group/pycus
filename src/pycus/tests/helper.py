@@ -1,12 +1,21 @@
+from __future__ import annotations
+
 from hamcrest.core.base_matcher import BaseMatcher
+from hamcrest.core.description import Description
 from hamcrest.core.helpers.wrap_matcher import wrap_matcher
+
+from typing import Sequence, Any, Optional
 
 
 class HasItemsInOrder(BaseMatcher):
-    def __init__(self, matchers):
+    def __init__(self, matchers: Sequence[BaseMatcher]):
         self.matchers = matchers
 
-    def matches(self, sequence, mismatch_description=None):  # pragma: no cover
+    def matches(
+        self,
+        sequence: Sequence[Any],
+        mismatch_description: Optional[Description] = None,
+    ) -> bool:  # pragma: no cover
         things = iter(enumerate(sequence))
         to_match = 0
         for matcher in self.matchers:
@@ -26,7 +35,7 @@ class HasItemsInOrder(BaseMatcher):
                 return False
         return True
 
-    def describe_to(self, description):  # pragma: no cover
+    def describe_to(self, description: Description) -> None:  # pragma: no cover
         description.append_text("a sequence containing ")
         for matcher in self.matchers[:-1]:
             description.append_description_of(matcher)
@@ -34,5 +43,5 @@ class HasItemsInOrder(BaseMatcher):
         description.append_description_of(self.matchers[-1])
 
 
-def has_items_in_order(*matchers):
+def has_items_in_order(*matchers: Any) -> HasItemsInOrder:
     return HasItemsInOrder([wrap_matcher(matcher) for matcher in matchers])
