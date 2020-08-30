@@ -4,9 +4,12 @@ from pycus import commands
 from unittest import mock
 import unittest
 import io
+import os
 from hamcrest import assert_that, equal_to, contains_exactly, contains_string
 
-from pycus.tests.helper import has_items_in_order
+import face
+
+from pycus.tests.helper import has_items_in_order, temp_dir
 
 
 class TestCommands(unittest.TestCase):
@@ -17,7 +20,7 @@ class TestCommands(unittest.TestCase):
         name = "an-awesome-env"
         jupyter = "/path/to/jupyter"
         with mock.patch("sys.stdout", new=io.StringIO()) as new_stdout:
-            commands.add(environment, name, jupyter, runner)
+            commands.add(environment, name, jupyter, runner, {})
         output = new_stdout.getvalue().split()
         assert_that(output, has_items_in_order(environment, name, jupyter))
         assert_that(runner.call_count, equal_to(3))
@@ -58,7 +61,7 @@ class TestCommands(unittest.TestCase):
         name = "an-awesome-env"
         jupyter = "/path/to/jupyter"
         with mock.patch("sys.stdout", new=io.StringIO()) as new_stdout:
-            commands.add(environment, name, jupyter, runner)
+            commands.add(environment, name, jupyter, runner, {})
         lines = new_stdout.getvalue().splitlines()
         assert_that(
             lines,
@@ -77,7 +80,7 @@ class TestCommands(unittest.TestCase):
         environment = "/path/to/best-env"
         jupyter = "/path/to/jupyter"
         with mock.patch("sys.stdout", new=io.StringIO()) as new_stdout:
-            commands.add(environment, None, jupyter, runner)
+            commands.add(environment, None, jupyter, runner, {})
         output = new_stdout.getvalue().split()
         assert_that(output, has_items_in_order(environment, "best-env", jupyter))
         assert_that(runner.call_count, equal_to(3))
@@ -88,7 +91,7 @@ class TestCommands(unittest.TestCase):
         environment = "/path/to/best-env/"
         jupyter = "/path/to/jupyter"
         with mock.patch("sys.stdout", new=io.StringIO()) as new_stdout:
-            commands.add(environment, None, jupyter, runner)
+            commands.add(environment, None, jupyter, runner, {})
         output = new_stdout.getvalue().split()
         assert_that(output, has_items_in_order(environment, "best-env", jupyter))
         assert_that(runner.call_count, equal_to(3))
@@ -98,7 +101,49 @@ class TestCommands(unittest.TestCase):
         runner.return_value.returncode = 0
         environment = "/path/to/best-env/"
         with mock.patch("sys.stdout", new=io.StringIO()) as new_stdout:
-            commands.add(environment, None, None, runner)
+            commands.add(environment, None, None, runner, {})
         output = new_stdout.getvalue().split()
         assert_that(output, has_items_in_order(environment, "best-env", "jupyter"))
         assert_that(runner.call_count, equal_to(3))
+
+    def test_happy_path_existing_files(self):
+        runner = mock.MagicMock()
+        runner.return_value.returncode = 0
+        with temp_dir() as dirname:
+            environment = os.path.join(dirname, "best-env")
+            os.mkdir(environment)
+            with mock.patch("sys.stdout", new=io.StringIO()) as new_stdout:
+                commands.add(environment, None, None, runner, {})
+        output = new_stdout.getvalue().split()
+        assert_that(output, has_items_in_order(environment, "best-env", "jupyter"))
+        assert_that(runner.call_count, equal_to(3))
+
+    def test_happy_path_workon_home(self):
+        runner = mock.MagicMock()
+        runner.return_value.returncode = 0
+        with temp_dir() as dirname:
+            environment = os.path.join(dirname, "best-env")
+            os_environ = dict(WORKON_HOME=dirname)
+            os.mkdir(environment)
+            with mock.patch("sys.stdout", new=io.StringIO()) as new_stdout:
+                commands.add("best-env", None, None, runner, os_environ)
+        output = new_stdout.getvalue().split()
+        assert_that(output, has_items_in_order(environment, "best-env", "jupyter"))
+        assert_that(runner.call_count, equal_to(3))
+
+
+class TestMakeMiddlewares(unittest.TestCase):
+    def test_stringy_middleware(self):
+        recorder = mock.MagicMock()
+
+        def silly(silly_string):
+            recorder(silly_string)
+
+        static = commands.make_middlewares(silly_string="super silly")
+        silly_cmd = face.Command(silly)
+        for mw in static.values():
+            silly_cmd.add(mw)
+        silly_cmd.run(argv=["silly"])
+        assert_that(recorder.call_count, equal_to(1))
+        [value], kwargs = recorder.call_args
+        assert_that(value, equal_to("super silly"))

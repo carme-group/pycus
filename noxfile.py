@@ -15,12 +15,13 @@ def tests(session):
     session.run(
         "coverage",
         "run",
+        "--branch",
         "--source=pycus",
         "--omit=**/__main__.py",
         "-m",
         "virtue",
         *tests,
-        env=dict(COVERAGE_FILE=os.path.join(tmpdir, "coverage")),
+        env=dict(COVERAGE_FILE=os.path.join(tmpdir, "coverage"), TMPDIR=tmpdir),
     )
     fail_under = "--fail-under=100"
     session.run(
