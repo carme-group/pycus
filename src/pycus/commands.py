@@ -26,7 +26,9 @@ class _Runner(Protocol):
 
 
 def _optimistic_run(
-    runner: _Runner, description: str, arguments: Sequence[str],
+    runner: _Runner,
+    description: str,
+    arguments: Sequence[str],
 ) -> None:
     result = runner(arguments)
     if result.returncode != 0:
