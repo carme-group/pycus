@@ -4,7 +4,11 @@ from hamcrest.core.base_matcher import BaseMatcher
 from hamcrest.core.description import Description
 from hamcrest.core.helpers.wrap_matcher import wrap_matcher
 
-from typing import Sequence, Any, Optional
+from typing import Sequence, Any, Optional, Iterator
+
+import contextlib
+import tempfile
+import shutil
 
 
 class HasItemsInOrder(BaseMatcher):
@@ -45,3 +49,12 @@ class HasItemsInOrder(BaseMatcher):
 
 def has_items_in_order(*matchers: Any) -> HasItemsInOrder:
     return HasItemsInOrder([wrap_matcher(matcher) for matcher in matchers])
+
+
+@contextlib.contextmanager
+def temp_dir() -> Iterator[str]:
+    try:
+        dirname = tempfile.mkdtemp()
+        yield dirname
+    finally:
+        shutil.rmtree(dirname)

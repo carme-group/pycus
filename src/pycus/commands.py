@@ -6,7 +6,7 @@ import subprocess
 import sys
 
 import face
-from typing import Sequence, Any
+from typing import Sequence, Any, Mapping, Callable
 from typing_extensions import Protocol
 
 
@@ -33,10 +33,18 @@ def _optimistic_run(
         raise _ProcessHopesShattered(description, result)
 
 
-def add(environment: str, name: str, jupyter: str, runner: _Runner) -> None:
+def add(
+    environment: str,
+    name: str,
+    jupyter: str,
+    runner: _Runner,
+    os_environ: Mapping[str, str],
+) -> None:
     """
     Add a virtual environment
     """
+    if not os.path.exists(environment):
+        environment = os.path.join(os_environ.get("WORKON_HOME", ""), environment)
     if name is None:
         name = os.path.basename(environment)
         if name == "":  # Allow trailing / because of shell completion
@@ -91,15 +99,28 @@ class _Middleware(Protocol):
         "next"
 
 
-@face.face_middleware(provides=["runner"])
-def runner_mw(next_: _Middleware) -> _Middleware:  # pragma: no cover
-    return next_(
-        runner=functools.partial(subprocess.run, capture_output=True, text=True)
-    )
+def make_middlewares(**kwargs: Any) -> Mapping[str, Callable]:
+    def make_middleware(name: str, thing: Any) -> Callable:
+        @face.face_middleware(provides=[name])
+        def middleware(next_: _Middleware) -> _Middleware:
+            return next_(**{name: thing})
 
+        return middleware
+
+    ret_value = {}
+    for key, value in kwargs.items():
+        ret_value[key] = make_middleware(key, value)
+    return ret_value
+
+
+STATIC_MIDDLEWARES = make_middlewares(
+    runner=functools.partial(subprocess.run, capture_output=True, text=True),
+    os_environ=os.environ,
+)
 
 add_cmd = face.Command(add)
-add_cmd.add(runner_mw)
+for mw in STATIC_MIDDLEWARES.values():
+    add_cmd.add(mw)
 add_cmd.add("--environment", missing=face.ERROR)
 add_cmd.add("--jupyter")
 add_cmd.add("--name")
