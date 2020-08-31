@@ -30,7 +30,11 @@ def _optimistic_run(
     description: str,
     arguments: Sequence[str],
 ) -> None:
-    result = runner(arguments)
+    try:
+        result = runner(arguments)
+    except OSError as exc:
+        exc.description = description
+        raise
     if result.returncode != 0:
         raise _ProcessHopesShattered(description, result)
 
@@ -92,6 +96,9 @@ def add(
         sys.stdout.write(details.stdout)
         print("Error:")
         sys.stdout.write(details.stderr)
+    except OSError as exc:
+        print(f"Commands to {exc.description} failed:")
+        print(exc)
     else:
         print(f"✅ Added {environment} as {name} to {jupyter}")
 
