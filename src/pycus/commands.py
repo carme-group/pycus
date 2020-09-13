@@ -42,7 +42,11 @@ def _optimistic_run(
         raise _ProcessHopesShattered(description, result)
 
 
-def _get_environment(os_environ: Mapping[str, str], current_working_directory: str, dirname: Optional[str]) -> str:
+def _get_environment(
+    os_environ: Mapping[str, str],
+    current_working_directory: str,
+    dirname: Optional[str],
+) -> str:
     attempts = []
     if dirname is None:
         dirname = os.path.basename(current_working_directory)
@@ -51,8 +55,9 @@ def _get_environment(os_environ: Mapping[str, str], current_working_directory: s
     with contextlib.suppress(KeyError):
         attempts.append(os.path.join(os_environ["WORKON_HOME"], dirname))
     if not attempts:
-        raise ValueError("no environment given and no WORKON_HOME in environment",
-                         os_environ.keys())
+        raise ValueError(
+            "no environment given and no WORKON_HOME in environment", os_environ.keys()
+        )
     for attempt in attempts:
         python = os.path.join(attempt, "bin", "python")
         if os.path.exists(python):
@@ -74,7 +79,9 @@ def add(
     if jupyter is None:
         jupyter = "jupyter"
     try:
-        environment = _get_environment(os_environ, current_working_directory, environment)
+        environment = _get_environment(
+            os_environ, current_working_directory, environment
+        )
         if name is None:
             name = os.path.basename(environment)
         venv_python = os.path.join(environment, "bin", "python")
