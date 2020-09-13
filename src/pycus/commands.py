@@ -68,8 +68,6 @@ def add(
         environment = _get_environment(os_environ, environment)
         if name is None:
             name = os.path.basename(environment)
-            if name == "":  # Allow trailing / because of shell completion
-                name = os.path.basename(os.path.dirname(environment))
         venv_python = os.path.join(environment, "bin", "python")
         _optimistic_run(
             runner,
