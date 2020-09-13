@@ -177,6 +177,22 @@ class TestCommands(unittest.TestCase):
         assert_that(output, has_items_in_order(environment, "best-env", "jupyter"))
         assert_that(runner.call_count, equal_to(3))
 
+    def test_happy_path_workon_home_default_env(self):
+        runner = mock.MagicMock()
+        runner.return_value.returncode = 0
+        with temp_dir() as dirname:
+            environment = os.path.join(dirname, "best-env")
+            cwd = os.path.join(dirname, "this-doesnt-exist", "best-env")
+            os_environ = dict(WORKON_HOME=dirname)
+            os.makedirs(os.path.join(environment, "bin"))
+            with open(os.path.join(environment, "bin", "python"), "w"):
+                pass
+            with mock.patch("sys.stdout", new=io.StringIO()) as new_stdout:
+                commands.add(None, None, None, runner, os_environ, cwd)
+        output = new_stdout.getvalue().split()
+        assert_that(output, has_items_in_order(environment, "best-env", "jupyter"))
+        assert_that(runner.call_count, equal_to(3))
+
 
 class TestMakeMiddlewares(unittest.TestCase):
     def test_stringy_middleware(self):
