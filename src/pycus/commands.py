@@ -7,7 +7,7 @@ import sys
 import contextlib
 
 import face
-from typing import Sequence, Any, Mapping, Callable
+from typing import Sequence, Any, Mapping, Callable, Optional
 from typing_extensions import Protocol
 
 
@@ -41,17 +41,20 @@ def _optimistic_run(
     if result.returncode != 0:
         raise _ProcessHopesShattered(description, result)
 
-def _is_environment(dirname: str):
+
+def _is_environment(dirname: str) -> bool:
     return os.path.exists(os.path.join(dirname, "bin", "python"))
 
-def _get_environment(os_environ, dirname):
+
+def _get_environment(os_environ: Mapping[str, str], dirname: str) -> str:
     attempts = [os.path.abspath(dirname)]
     with contextlib.suppress(KeyError):
-       attempts.append(os.path.join(os_environ["WORKON_HOME"], dirname))
+        attempts.append(os.path.join(os_environ["WORKON_HOME"], dirname))
     for attempt in attempts:
         if os.path.exists(os.path.join(attempt, "bin", "python")):
             return attempt
     raise ValueError("Cannot find environment, tried", attempts)
+
 
 def add(
     environment: str,
@@ -63,15 +66,15 @@ def add(
     """
     Add a virtual environment
     """
-    environment = _get_environment(os_environ, environment)
-    if name is None:
-        name = os.path.basename(environment)
-        if name == "":  # Allow trailing / because of shell completion
-            name = os.path.basename(os.path.dirname(environment))
     if jupyter is None:
         jupyter = "jupyter"
-    venv_python = os.path.join(environment, "bin", "python")
     try:
+        environment = _get_environment(os_environ, environment)
+        if name is None:
+            name = os.path.basename(environment)
+            if name == "":  # Allow trailing / because of shell completion
+                name = os.path.basename(os.path.dirname(environment))
+        venv_python = os.path.join(environment, "bin", "python")
         _optimistic_run(
             runner,
             "install ipykernel",
@@ -112,6 +115,9 @@ def add(
     except OSError as exc:
         print(f"Commands to {exc.args[-1]} failed:")
         print(exc)
+    except ValueError as exc:
+        string_exc = " ".join(map(str, exc.args))
+        print(f"Could not add environment: {string_exc}")
     else:
         print(f"✅ Added {environment} as {name} to {jupyter}")
 
