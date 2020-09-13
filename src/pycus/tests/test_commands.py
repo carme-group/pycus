@@ -74,6 +74,23 @@ class TestCommands(unittest.TestCase):
             ),
         )
 
+    def test_not_running_env_add(self):
+        runner = mock.MagicMock(name="runner")
+        runner.side_effect = OSError("Cannot run this")
+        environment = "/path/to/env"
+        name = "an-awesome-env"
+        jupyter = "/path/to/jupyter"
+        with mock.patch("sys.stdout", new=io.StringIO()) as new_stdout:
+            commands.add(environment, name, jupyter, runner, {})
+        lines = new_stdout.getvalue().splitlines()
+        assert_that(
+            lines,
+            contains_exactly(
+                contains_string("install ipykernel"),
+                contains_string("Cannot run this"),
+            ),
+        )
+
     def test_happy_path_add_default_name(self):
         runner = mock.MagicMock()
         runner.return_value.returncode = 0
