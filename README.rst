@@ -6,7 +6,9 @@ Pycus adds Python virtual environments to Jupyter.
 Usage
 -----
 
-<Eventually readthe docs link here, for now, see docs/>
+See docs_.
+
+.. _docs: https://pycus.readthedocs.io/en/latest/
 
 Contributing
 ------------
