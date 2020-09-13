@@ -100,6 +100,20 @@ class TestCommands(unittest.TestCase):
             ),
         )
 
+    def test_not_finding_env(self):
+        runner = mock.MagicMock(name="runner")
+        runner.side_effect = OSError("Cannot run this")
+        environment = os.path.join(self.temporary_dir, "no-such-env")
+        with mock.patch("sys.stdout", new=io.StringIO()) as new_stdout:
+            commands.add(environment, None, None, runner, {})
+        lines = new_stdout.getvalue().splitlines()
+        assert_that(
+            lines,
+            contains_exactly(
+                contains_string("no-such-env"),
+            ),
+        )
+
     def test_happy_path_add_default_name(self):
         runner = mock.MagicMock()
         runner.return_value.returncode = 0

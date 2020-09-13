@@ -42,10 +42,6 @@ def _optimistic_run(
         raise _ProcessHopesShattered(description, result)
 
 
-def _is_environment(dirname: str) -> bool:
-    return os.path.exists(os.path.join(dirname, "bin", "python"))
-
-
 def _get_environment(os_environ: Mapping[str, str], dirname: str) -> str:
     attempts = [os.path.abspath(dirname)]
     with contextlib.suppress(KeyError):
