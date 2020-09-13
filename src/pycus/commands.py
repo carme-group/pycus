@@ -42,22 +42,31 @@ def _optimistic_run(
         raise _ProcessHopesShattered(description, result)
 
 
-def _get_environment(os_environ: Mapping[str, str], dirname: str) -> str:
-    attempts = [os.path.abspath(dirname)]
+def _get_environment(os_environ: Mapping[str, str], current_working_directory: str, dirname: Optional[str]) -> str:
+    attempts = []
+    if dirname is None:
+        dirname = os.path.basename(current_working_directory)
+    else:
+        attempts.append(os.path.abspath(dirname))
     with contextlib.suppress(KeyError):
         attempts.append(os.path.join(os_environ["WORKON_HOME"], dirname))
+    if not attempts:
+        raise ValueError("no environment given and no WORKON_HOME in environment",
+                         os_environ.keys())
     for attempt in attempts:
-        if os.path.exists(os.path.join(attempt, "bin", "python")):
+        python = os.path.join(attempt, "bin", "python")
+        if os.path.exists(python):
             return attempt
     raise ValueError("Cannot find environment, tried", attempts)
 
 
 def add(
-    environment: str,
+    environment: Optional[str],
     name: Optional[str],
     jupyter: Optional[str],
     runner: _Runner,
     os_environ: Mapping[str, str],
+    current_working_directory: str,
 ) -> None:
     """
     Add a virtual environment
@@ -65,7 +74,7 @@ def add(
     if jupyter is None:
         jupyter = "jupyter"
     try:
-        environment = _get_environment(os_environ, environment)
+        environment = _get_environment(os_environ, current_working_directory, environment)
         if name is None:
             name = os.path.basename(environment)
         venv_python = os.path.join(environment, "bin", "python")
@@ -138,12 +147,13 @@ def make_middlewares(**kwargs: Any) -> Mapping[str, Callable]:
 STATIC_MIDDLEWARES = make_middlewares(
     runner=functools.partial(subprocess.run, capture_output=True, text=True),
     os_environ=os.environ,
+    current_working_directory=os.getcwd(),
 )
 
 add_cmd = face.Command(add)
 for mw in STATIC_MIDDLEWARES.values():
     add_cmd.add(mw)
-add_cmd.add("--environment", missing=face.ERROR)
+add_cmd.add("--environment")
 add_cmd.add("--jupyter")
 add_cmd.add("--name")
 
