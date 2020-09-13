@@ -28,7 +28,7 @@ class TestCommands(unittest.TestCase):
         name = "an-awesome-env"
         jupyter = "/path/to/jupyter"
         with mock.patch("sys.stdout", new=io.StringIO()) as new_stdout:
-            commands.add(environment, name, jupyter, runner, {})
+            commands.add(environment, name, jupyter, runner, {}, None)
         output = new_stdout.getvalue().split()
         assert_that(output, has_items_in_order(environment, name, jupyter))
         assert_that(runner.call_count, equal_to(3))
@@ -69,7 +69,7 @@ class TestCommands(unittest.TestCase):
         name = "an-awesome-env"
         jupyter = "/path/to/jupyter"
         with mock.patch("sys.stdout", new=io.StringIO()) as new_stdout:
-            commands.add(environment, name, jupyter, runner, {})
+            commands.add(environment, name, jupyter, runner, {}, None)
         lines = new_stdout.getvalue().splitlines()
         assert_that(
             lines,
@@ -89,7 +89,7 @@ class TestCommands(unittest.TestCase):
         name = "an-awesome-env"
         jupyter = "/path/to/jupyter"
         with mock.patch("sys.stdout", new=io.StringIO()) as new_stdout:
-            commands.add(environment, name, jupyter, runner, {})
+            commands.add(environment, name, jupyter, runner, {}, None)
         lines = new_stdout.getvalue().splitlines()
         assert_that(
             lines,
@@ -104,7 +104,7 @@ class TestCommands(unittest.TestCase):
         runner.side_effect = OSError("Cannot run this")
         environment = os.path.join(self.temporary_dir, "no-such-env")
         with mock.patch("sys.stdout", new=io.StringIO()) as new_stdout:
-            commands.add(environment, None, None, runner, {})
+            commands.add(environment, None, None, runner, {}, None)
         lines = new_stdout.getvalue().splitlines()
         assert_that(
             lines,
@@ -120,7 +120,7 @@ class TestCommands(unittest.TestCase):
         env_name = os.path.basename(self.temporary_dir)
         jupyter = "/path/to/jupyter"
         with mock.patch("sys.stdout", new=io.StringIO()) as new_stdout:
-            commands.add(environment, None, jupyter, runner, {})
+            commands.add(environment, None, jupyter, runner, {}, None)
         output = new_stdout.getvalue().split()
         assert_that(output, has_items_in_order(environment, env_name, jupyter))
         assert_that(runner.call_count, equal_to(3))
@@ -132,7 +132,7 @@ class TestCommands(unittest.TestCase):
         env_name = os.path.basename(self.temporary_dir)
         jupyter = "/path/to/jupyter"
         with mock.patch("sys.stdout", new=io.StringIO()) as new_stdout:
-            commands.add(environment, None, jupyter, runner, {})
+            commands.add(environment, None, jupyter, runner, {}, None)
         output = new_stdout.getvalue().split()
         assert_that(output, has_items_in_order(self.temporary_dir, env_name, jupyter))
         assert_that(runner.call_count, equal_to(3))
@@ -143,7 +143,7 @@ class TestCommands(unittest.TestCase):
         environment = self.temporary_dir
         env_name = os.path.basename(self.temporary_dir)
         with mock.patch("sys.stdout", new=io.StringIO()) as new_stdout:
-            commands.add(environment, None, None, runner, {})
+            commands.add(environment, None, None, runner, {}, None)
         output = new_stdout.getvalue().split()
         assert_that(output, has_items_in_order(environment, env_name, "jupyter"))
         assert_that(runner.call_count, equal_to(3))
@@ -157,7 +157,7 @@ class TestCommands(unittest.TestCase):
             with open(os.path.join(environment, "bin", "python"), "w"):
                 pass
             with mock.patch("sys.stdout", new=io.StringIO()) as new_stdout:
-                commands.add(environment, None, None, runner, {})
+                commands.add(environment, None, None, runner, {}, None)
         output = new_stdout.getvalue().split()
         assert_that(output, has_items_in_order(environment, "best-env", "jupyter"))
         assert_that(runner.call_count, equal_to(3))
@@ -172,10 +172,46 @@ class TestCommands(unittest.TestCase):
             with open(os.path.join(environment, "bin", "python"), "w"):
                 pass
             with mock.patch("sys.stdout", new=io.StringIO()) as new_stdout:
-                commands.add("best-env", None, None, runner, os_environ)
+                commands.add("best-env", None, None, runner, os_environ, None)
         output = new_stdout.getvalue().split()
         assert_that(output, has_items_in_order(environment, "best-env", "jupyter"))
         assert_that(runner.call_count, equal_to(3))
+
+    def test_happy_path_workon_home_default_env(self):
+        runner = mock.MagicMock()
+        runner.return_value.returncode = 0
+        with temp_dir() as dirname:
+            environment = os.path.join(dirname, "best-env")
+            cwd = os.path.join(dirname, "this-doesnt-exist", "best-env")
+            os_environ = dict(WORKON_HOME=dirname)
+            os.makedirs(os.path.join(environment, "bin"))
+            with open(os.path.join(environment, "bin", "python"), "w"):
+                pass
+            with mock.patch("sys.stdout", new=io.StringIO()) as new_stdout:
+                commands.add(None, None, None, runner, os_environ, cwd)
+        output = new_stdout.getvalue().split()
+        assert_that(output, has_items_in_order(environment, "best-env", "jupyter"))
+        assert_that(runner.call_count, equal_to(3))
+
+    def test_no_workon_no_env(self):
+        runner = mock.MagicMock()
+        runner.return_value.returncode = 0
+        with temp_dir() as dirname:
+            environment = os.path.join(dirname, "best-env")
+            cwd = os.path.join(dirname, "this-doesnt-exist", "best-env")
+            os_environ = {}
+            os.makedirs(os.path.join(environment, "bin"))
+            with open(os.path.join(environment, "bin", "python"), "w"):
+                pass
+            with mock.patch("sys.stdout", new=io.StringIO()) as new_stdout:
+                commands.add(None, None, None, runner, os_environ, cwd)
+        lines = new_stdout.getvalue().splitlines()
+        assert_that(
+            lines,
+            contains_exactly(
+                contains_string("WORKON_HOME"),
+            ),
+        )
 
 
 class TestMakeMiddlewares(unittest.TestCase):
