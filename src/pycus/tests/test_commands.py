@@ -13,7 +13,6 @@ from pycus.tests.helper import has_items_in_order, temp_dir
 
 
 class TestCommands(unittest.TestCase):
-
     def run(self, result=None):
         with temp_dir() as dirname:
             self.temporary_dir = dirname
