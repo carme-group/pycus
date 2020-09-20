@@ -7,5 +7,5 @@ Provides pycus version information.
 
 from incremental import Version
 
-__version__ = Version("pycus", 20, 7, 0)
+__version__ = Version('pycus', 20, 9, 0)
 __all__ = ["__version__"]
