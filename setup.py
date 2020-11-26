@@ -17,7 +17,7 @@ setuptools.setup(
     install_requires=["incremental", "jupyterlab", "face", "typing_extensions"],
     extras_require=dict(
         test=["virtue", "pyhamcrest", "coverage"],
-        lint=["black", "flake8", "mypy"],
+        lint=["black", "flake8", "mypy", "bandit"],
         doc=["sphinx"],
     ),
     entry_points=dict(
