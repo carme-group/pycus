@@ -41,6 +41,7 @@ def lint(session):
     session.run("black", "--check", "--diff", *files)
     black_compat = ["--max-line-length=88", "--ignore=E203"]
     session.run("flake8", *black_compat, "src/pycus")
+    session.run("bandit", "src/pycus")
     session.run(
         "mypy",
         "--disallow-untyped-defs",
