@@ -7,7 +7,7 @@ import io
 import os
 import contextlib
 import sys
-from hamcrest import assert_that, equal_to, contains_exactly, contains_string, all_of
+from hamcrest import assert_that, equal_to, contains_exactly, contains_string, all_of, not_
 
 import face
 
@@ -262,6 +262,26 @@ class TestCreate(unittest.TestCase):
             all_of(
                 contains_string("Added"),
                 contains_string(environment),
+            )
+        )
+
+    def test_failed_create(self):
+        commands.create(
+             environment=None,
+             python=None,
+             runner=self.runner,
+             os_environ={},
+             current_working_directory=os.path.join(self.temporary_dir, "cwd"),
+        )
+        assert_that(
+            self.runner.call_count,
+            equal_to(0),
+        )
+        assert_that(
+            self.stdout.getvalue(),
+            all_of(
+                not_(contains_string("Added")),
+                contains_string("WORKON_HOME"),
             )
         )
 
