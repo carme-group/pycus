@@ -5,14 +5,16 @@ from unittest import mock
 import unittest
 import io
 import os
-from hamcrest import assert_that, equal_to, contains_exactly, contains_string
+import contextlib
+import sys
+from hamcrest import assert_that, equal_to, contains_exactly, contains_string, all_of
 
 import face
 
 from pycus.tests.helper import has_items_in_order, temp_dir
 
 
-class TestCommands(unittest.TestCase):
+class TestAddd(unittest.TestCase):
     def run(self, result=None):
         with temp_dir() as dirname:
             self.temporary_dir = dirname
@@ -211,6 +213,56 @@ class TestCommands(unittest.TestCase):
             contains_exactly(
                 contains_string("WORKON_HOME"),
             ),
+        )
+
+
+class TestCreate(unittest.TestCase):
+    def run(self, result=None):
+        runner = self.runner = mock.MagicMock(name="subprocess.run")
+        def venv_maker(args):
+            if args[0].endswith("python") and args[1:3] == ["-m", "venv"]:
+                environment = args[3]
+                os.makedirs(os.path.join(environment, "bin"))
+                with open(os.path.join(environment, "bin", "python"), "w"):
+                    pass
+            return mock.MagicMock(
+                name="process_results",
+                returncode=0,
+                stdout="finished {args}",
+                stderr="",
+            )
+        runner.side_effect = venv_maker
+        with contextlib.ExitStack() as stack:
+            self.temporary_dir = stack.enter_context(temp_dir())
+            self.stdout = stack.enter_context(
+                mock.patch("sys.stdout",
+                new=io.StringIO(),
+            ))
+            super().run(result)
+
+    def test_simple_create(self):
+        environment=os.path.join(self.temporary_dir, "newenv")
+        commands.create(
+             environment=environment,
+             python=None,
+             runner=self.runner,
+             os_environ={},
+             current_working_directory=os.path.join(self.temporary_dir, "cwd"),
+        )
+        call_args_list = list(self.runner.call_args_list)
+        [args], kwargs = call_args_list[0]
+        assert_that(
+            args,
+            contains_exactly(
+                *f"{sys.executable} -m venv {environment}".split()
+            ),
+        )
+        assert_that(
+            self.stdout.getvalue(),
+            all_of(
+                contains_string("Added"),
+                contains_string(environment),
+            )
         )
 
 

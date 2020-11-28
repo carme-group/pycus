@@ -82,9 +82,9 @@ def _user_friendly_errors() -> Iterator[Status]:
         stage, details = exc.args
         print(f"Commands to {stage} failed:")
         print("Output:")
-        sys.stdout.write(details.stdout)
+        sys.stdout.write(str(details.stdout))
         print("Error:")
-        sys.stdout.write(details.stderr)
+        sys.stdout.write(str(details.stderr))
     except OSError as exc:
         print(f"Commands to {exc.args[-1]} failed:")
         print(exc)
