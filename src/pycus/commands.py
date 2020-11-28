@@ -67,13 +67,13 @@ def _get_environment(
             return attempt
     raise ValueError("Cannot find environment, tried", attempts)
 
-    
+
 @attr.s(auto_attribs=True)
 class Status:
     success: bool = attr.ib(init=False, default=False)
-  
-                            
-@contextlib.contextmanager    
+
+
+@contextlib.contextmanager
 def _user_friendly_errors() -> Iterator[Status]:
     status = Status()
     try:
@@ -93,7 +93,7 @@ def _user_friendly_errors() -> Iterator[Status]:
         print(f"Could not add environment: {string_exc}")
     else:
         status.success = True
-    
+
 
 def create(
     environment: Optional[str],
@@ -116,7 +116,7 @@ def create(
             "create environment",
             [python, "-m", "venv", environment],
         )
-    if status.success == False:
+    if not status.success:
         return
     add(
         environment=environment,
@@ -127,7 +127,6 @@ def create(
         current_working_directory=current_working_directory,
     )
 
-    
 
 def add(
     environment: Optional[str],

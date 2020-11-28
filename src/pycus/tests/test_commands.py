@@ -7,7 +7,14 @@ import io
 import os
 import contextlib
 import sys
-from hamcrest import assert_that, equal_to, contains_exactly, contains_string, all_of, not_
+from hamcrest import (
+    assert_that,
+    equal_to,
+    contains_exactly,
+    contains_string,
+    all_of,
+    not_,
+)
 
 import face
 
@@ -219,6 +226,7 @@ class TestAddd(unittest.TestCase):
 class TestCreate(unittest.TestCase):
     def run(self, result=None):
         runner = self.runner = mock.MagicMock(name="subprocess.run")
+
         def venv_maker(args):
             if args[0].endswith("python") and args[1:3] == ["-m", "venv"]:
                 environment = args[3]
@@ -231,47 +239,48 @@ class TestCreate(unittest.TestCase):
                 stdout="finished {args}",
                 stderr="",
             )
+
         runner.side_effect = venv_maker
         with contextlib.ExitStack() as stack:
             self.temporary_dir = stack.enter_context(temp_dir())
             self.stdout = stack.enter_context(
-                mock.patch("sys.stdout",
-                new=io.StringIO(),
-            ))
+                mock.patch(
+                    "sys.stdout",
+                    new=io.StringIO(),
+                )
+            )
             super().run(result)
 
     def test_simple_create(self):
-        environment=os.path.join(self.temporary_dir, "newenv")
+        environment = os.path.join(self.temporary_dir, "newenv")
         commands.create(
-             environment=environment,
-             python=None,
-             runner=self.runner,
-             os_environ={},
-             current_working_directory=os.path.join(self.temporary_dir, "cwd"),
+            environment=environment,
+            python=None,
+            runner=self.runner,
+            os_environ={},
+            current_working_directory=os.path.join(self.temporary_dir, "cwd"),
         )
         call_args_list = list(self.runner.call_args_list)
         [args], kwargs = call_args_list[0]
         assert_that(
             args,
-            contains_exactly(
-                *f"{sys.executable} -m venv {environment}".split()
-            ),
+            contains_exactly(*f"{sys.executable} -m venv {environment}".split()),
         )
         assert_that(
             self.stdout.getvalue(),
             all_of(
                 contains_string("Added"),
                 contains_string(environment),
-            )
+            ),
         )
 
     def test_failed_create(self):
         commands.create(
-             environment=None,
-             python=None,
-             runner=self.runner,
-             os_environ={},
-             current_working_directory=os.path.join(self.temporary_dir, "cwd"),
+            environment=None,
+            python=None,
+            runner=self.runner,
+            os_environ={},
+            current_working_directory=os.path.join(self.temporary_dir, "cwd"),
         )
         assert_that(
             self.runner.call_count,
@@ -282,59 +291,55 @@ class TestCreate(unittest.TestCase):
             all_of(
                 not_(contains_string("Added")),
                 contains_string("WORKON_HOME"),
-            )
+            ),
         )
 
     def test_explicit_python_create(self):
-        environment=os.path.join(self.temporary_dir, "newenv")
+        environment = os.path.join(self.temporary_dir, "newenv")
         commands.create(
-             environment=environment,
-             python="/very/special/python",
-             runner=self.runner,
-             os_environ={},
-             current_working_directory=os.path.join(self.temporary_dir, "cwd"),
+            environment=environment,
+            python="/very/special/python",
+            runner=self.runner,
+            os_environ={},
+            current_working_directory=os.path.join(self.temporary_dir, "cwd"),
         )
         call_args_list = list(self.runner.call_args_list)
         [args], kwargs = call_args_list[0]
         assert_that(
             args,
-            contains_exactly(
-                *f"/very/special/python -m venv {environment}".split()
-            ),
+            contains_exactly(*f"/very/special/python -m venv {environment}".split()),
         )
         assert_that(
             self.stdout.getvalue(),
             all_of(
                 contains_string("Added"),
                 contains_string(environment),
-            )
+            ),
         )
 
     def test_autodetect_create(self):
-        environment=os.path.join(self.temporary_dir, "newenv")
-        os_environ=dict(WORKON_HOME=self.temporary_dir)
-        current_working_directory="/home/src/newenv"
+        environment = os.path.join(self.temporary_dir, "newenv")
+        os_environ = dict(WORKON_HOME=self.temporary_dir)
+        current_working_directory = "/home/src/newenv"
         commands.create(
-             environment=None,
-             python=None,
-             runner=self.runner,
-             os_environ=os_environ,
-             current_working_directory=current_working_directory,
+            environment=None,
+            python=None,
+            runner=self.runner,
+            os_environ=os_environ,
+            current_working_directory=current_working_directory,
         )
         call_args_list = list(self.runner.call_args_list)
         [args], kwargs = call_args_list[0]
         assert_that(
             args,
-            contains_exactly(
-                *f"{sys.executable} -m venv {environment}".split()
-            ),
+            contains_exactly(*f"{sys.executable} -m venv {environment}".split()),
         )
         assert_that(
             self.stdout.getvalue(),
             all_of(
                 contains_string("Added"),
                 contains_string(environment),
-            )
+            ),
         )
 
 
