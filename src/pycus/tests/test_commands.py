@@ -265,6 +265,58 @@ class TestCreate(unittest.TestCase):
             )
         )
 
+    def test_explicit_python_create(self):
+        environment=os.path.join(self.temporary_dir, "newenv")
+        commands.create(
+             environment=environment,
+             python="/very/special/python",
+             runner=self.runner,
+             os_environ={},
+             current_working_directory=os.path.join(self.temporary_dir, "cwd"),
+        )
+        call_args_list = list(self.runner.call_args_list)
+        [args], kwargs = call_args_list[0]
+        assert_that(
+            args,
+            contains_exactly(
+                *f"/very/special/python -m venv {environment}".split()
+            ),
+        )
+        assert_that(
+            self.stdout.getvalue(),
+            all_of(
+                contains_string("Added"),
+                contains_string(environment),
+            )
+        )
+
+    def test_autodetect_create(self):
+        environment=os.path.join(self.temporary_dir, "newenv")
+        os_environ=dict(WORKON_HOME=self.temporary_dir)
+        current_working_directory="/home/src/newenv"
+        commands.create(
+             environment=None,
+             python=None,
+             runner=self.runner,
+             os_environ=os_environ,
+             current_working_directory=current_working_directory,
+        )
+        call_args_list = list(self.runner.call_args_list)
+        [args], kwargs = call_args_list[0]
+        assert_that(
+            args,
+            contains_exactly(
+                *f"{sys.executable} -m venv {environment}".split()
+            ),
+        )
+        assert_that(
+            self.stdout.getvalue(),
+            all_of(
+                contains_string("Added"),
+                contains_string(environment),
+            )
+        )
+
 
 class TestMakeMiddlewares(unittest.TestCase):
     def test_stringy_middleware(self):
