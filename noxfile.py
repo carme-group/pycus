@@ -4,13 +4,16 @@ import os
 import nox
 
 nox.options.envdir = "build/nox"
+nox.options.sessions = ["lint", "tests", "mypy", "docs", "build"]
+
+VERSIONS = ["3.9", "3.10"]
 
 
-@nox.session(python=["3.7", "3.8"])
+@nox.session(python=VERSIONS)
 def tests(session):
-    """Run test suite with pytest."""
     tmpdir = session.create_tmp()
-    session.install(".[test]")
+    session.install("-r", "requirements-tests.txt")
+    session.install("-e", ".")
     tests = session.posargs or ["pycus.tests"]
     session.run(
         "coverage",
@@ -34,24 +37,35 @@ def tests(session):
     )
 
 
-@nox.session(python="3.8")
+@nox.session(python=VERSIONS[-1])
+def build(session):
+    session.install("build")
+    session.run("python", "-m", "build", "--wheel")
+
+
+@nox.session(python=VERSIONS[-1])
 def lint(session):
-    files = ["src/pycus", "noxfile.py", "setup.py"]
-    session.install("-e", ".[lint]")
+    files = ["src/", "noxfile.py"]
+    session.install("-r", "requirements-lint.txt")
+    session.install("-e", ".")
     session.run("black", "--check", "--diff", *files)
-    black_compat = ["--max-line-length=88", "--ignore=E203"]
-    session.run("flake8", *black_compat, "src/pycus")
-    session.run("bandit", "src/pycus")
+    black_compat = ["--max-line-length=88", "--ignore=E203,E503"]
+    session.run("flake8", *black_compat, "src/")
+
+
+@nox.session(python=VERSIONS[-1])
+def mypy(session):
+    session.install("-r", "requirements-mypy.txt")
+    session.install("-e", ".")
     session.run(
         "mypy",
-        "--disallow-untyped-defs",
         "--warn-unused-ignores",
         "--ignore-missing-imports",
-        "src/pycus",
+        "src/",
     )
 
 
-@nox.session(python="3.8")
+@nox.session(python=VERSIONS[-1])
 def docs(session):
     """Build the documentation."""
     output_dir = os.path.abspath(os.path.join(session.create_tmp(), "output"))
@@ -59,12 +73,23 @@ def docs(session):
         functools.partial(os.path.join, output_dir), ["doctrees", "html"]
     )
     session.run("rm", "-rf", output_dir, external=True)
-    session.install(".[doc]")
+    session.install("-r", "requirements-docs.txt")
+    session.install("-e", ".")
     sphinx = ["sphinx-build", "-b", "html", "-W", "-d", doctrees, ".", html]
-
-    if session.interactive:
-        session.install("sphinx-autobuild")
-        sphinx[0:1] = ["sphinx-autobuild", "--open-browser"]
-
     session.cd("doc")
     session.run(*sphinx)
+
+
+@nox.session(python=VERSIONS[-1])
+def refresh_deps(session):
+    """Refresh the requirements-*.txt files"""
+    session.install("pip-tools")
+    for deps in ["tests", "docs", "lint", "mypy"]:
+        session.run(
+            "pip-compile",
+            "--extra",
+            deps,
+            "pyproject.toml",
+            "--output-file",
+            f"requirements-{deps}.txt",
+        )
