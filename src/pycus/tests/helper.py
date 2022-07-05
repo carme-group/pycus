@@ -49,12 +49,3 @@ class HasItemsInOrder(BaseMatcher):
 
 def has_items_in_order(*matchers: Any) -> HasItemsInOrder:
     return HasItemsInOrder([wrap_matcher(matcher) for matcher in matchers])
-
-
-@contextlib.contextmanager
-def temp_dir() -> Iterator[str]:
-    try:
-        dirname = tempfile.mkdtemp()
-        yield dirname
-    finally:
-        shutil.rmtree(dirname)

@@ -16,14 +16,12 @@ from hamcrest import (
     not_,
 )
 
-import face
-
 from pycus.tests.helper import has_items_in_order, temp_dir
 
 
 class TestAddd(unittest.TestCase):
     def run(self, result=None):
-        with temp_dir() as dirname:
+        with tempfile.TemporaryDir() as dirname:
             self.temporary_dir = dirname
             os.mkdir(os.path.join(dirname, "bin"))
             with open(os.path.join(dirname, "bin", "python"), "w"):

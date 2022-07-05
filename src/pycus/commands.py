@@ -1,17 +1,25 @@
 from __future__ import annotations
 
-import functools
 import os
-import subprocess
 import sys
 import contextlib
 
-import attr
+import attrs
 
-import face
+import gather
+from gather import commands
+from gather.commands import add_argument
 
-from typing import Sequence, Any, Mapping, Callable, Optional, Iterator
-from typing_extensions import Protocol
+
+_COMMANDS_COLLECTOR = gather.Collector()
+REGISTER = commands.make_command_register(_COMMANDS_COLLECTOR)
+
+def main(): # pragma: no cover
+    commands.run(
+        parser=commands.set_parser(
+            collected=_COMMANDS_COLLECTOR.collect()
+        )
+    )
 
 
 class _ProcessHopesShattered(Exception):
@@ -35,7 +43,12 @@ def _optimistic_run(
     arguments: Sequence[str],
 ) -> None:
     try:
-        result = runner(arguments)
+        result = runner(
+            arguments,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
     except OSError as exc:
         args = list(exc.args)
         args.append(description)
@@ -47,20 +60,15 @@ def _optimistic_run(
 
 def _get_environment(
     os_environ: Mapping[str, str],
-    current_working_directory: str,
     dirname: Optional[str],
 ) -> str:
     attempts = []
     if dirname is None:
-        dirname = os.path.basename(current_working_directory)
+        dirname = os.path.basename(os_environ["PWD"])
     else:
         attempts.append(os.path.abspath(dirname))
     with contextlib.suppress(KeyError):
         attempts.append(os.path.join(os_environ["WORKON_HOME"], dirname))
-    if not attempts:
-        raise ValueError(
-            "no environment given and no WORKON_HOME in environment", os_environ.keys()
-        )
     for attempt in attempts:
         python = os.path.join(attempt, "bin", "python")
         if os.path.exists(python):
@@ -68,16 +76,10 @@ def _get_environment(
     raise ValueError("Cannot find environment, tried", attempts)
 
 
-@attr.s(auto_attribs=True)
-class Status:
-    success: bool = attr.ib(init=False, default=False)
-
-
 @contextlib.contextmanager
-def _user_friendly_errors() -> Iterator[Status]:
-    status = Status()
+def _user_friendly_errors() -> Iterator[None]:
     try:
-        yield status
+        yield
     except _ProcessHopesShattered as exc:
         stage, details = exc.args
         print(f"Commands to {stage} failed:")
@@ -92,70 +94,71 @@ def _user_friendly_errors() -> Iterator[Status]:
         string_exc = " ".join(map(str, exc.args))
         print(f"Could not add environment: {string_exc}")
     else:
-        status.success = True
+        return
+    raise SystemExit(1)
 
 
+@REGISTER(
+    add_argument("--environment"),
+    add_argument("--python", default=sys.executable),
+    add_argument("--jupyter-python", default=sys.executable),
+)
 def create(
-    environment: Optional[str],
-    python: Optional[str],
-    runner: _Runner,
-    os_environ: Mapping[str, str],
-    current_working_directory: str,
-) -> None:
-    if python is None:
-        python = sys.executable
-    with _user_friendly_errors() as status:
-        if environment is None:
-            environment = os.path.basename(current_working_directory)
+    *,
+    args,
+    env,
+    sp_run,
+f) -> None:
+    with _user_friendly_errors():
+        if args.environment is None:
+            args.environment = os.path.basename(env["PWD"])
         if not os.path.isabs(environment):
-            if "WORKON_HOME" not in os_environ:
-                raise ValueError("not absolute path and no WORKON_HOME", environment)
-            environment = os.path.join(os_environ["WORKON_HOME"], environment)
+            if "WORKON_HOME" not in env:
+                raise ValueError("not absolute path and no WORKON_HOME", args.environment)
+            args.environment = os.path.join(env["WORKON_HOME"], args.environment)
         _optimistic_run(
-            runner,
+            sp_run,
             "create environment",
             [python, "-m", "venv", environment],
         )
-    if not status.success:
-        return
     add(
-        environment=environment,
-        jupyter=None,
-        runner=runner,
-        name=None,
-        os_environ=os_environ,
-        current_working_directory=current_working_directory,
+        args=args,
+        env=env,
+        sp_run=sp_run,
     )
 
 
+@REGISTER(
+    add_argument("--environment"),
+    add_argument("--jupyter-python", default=sys.executable),
+)
 def add(
-    environment: Optional[str],
-    name: Optional[str],
-    jupyter: Optional[str],
-    runner: _Runner,
-    os_environ: Mapping[str, str],
-    current_working_directory: str,
+    *,
+    args,
+    env,
+    sp_run,
 ) -> None:
     """
     Add a virtual environment
     """
-    if jupyter is None:
-        jupyter = "jupyter"
-    with _user_friendly_errors() as status:
-        environment = _get_environment(
-            os_environ, current_working_directory, environment
+    with _user_friendly_errors():
+        args.environment = _get_environment(
+            env, args.environment,
         )
-        if name is None:
-            name = os.path.basename(environment)
-        venv_python = os.path.join(environment, "bin", "python")
+        if args.name is None:
+            args.name = os.path.basename(args.environment)
+        venv_python = os.path.join(args.environment, "bin", "python")
+        logical_name = f"{name}-venv"
+        description = os.path.join(
+            args.environment, "share", "jupyter", "kernels", logical_name
+        )
         _optimistic_run(
-            runner,
+            sp_run,
             "install ipykernel",
             [venv_python, "-m", "pip", "install", "ipykernel"],
         )
-        logical_name = f"{name}-venv"
         _optimistic_run(
-            runner,
+            sp_run,
             "create ipykernel description",
             [
                 venv_python,
@@ -170,62 +173,17 @@ def add(
                 environment,
             ],
         )
-        description = os.path.join(
-            environment, "share", "jupyter", "kernels", logical_name
-        )
         _optimistic_run(
-            runner,
+            sp_run,
             "add ipykernel description to jupyter",
-            [jupyter, "kernelspec", "install", description, "--sys-prefix"],
+            [
+                args.jupyter_python,
+                "-m", 
+                "jupyter",
+                "kernelspec",
+                "install",
+                description,
+                "--sys-prefix"
+            ],
         )
-    if status.success:
-        print(f"✅ Added {environment} as {name} to {jupyter}")
-
-
-class _Middleware(Protocol):
-    def __call__(self, *args: Any, **kwargs: Any) -> _Middleware:
-        "next"
-
-
-def make_middlewares(**kwargs: Any) -> Mapping[str, Callable]:
-    def make_middleware(name: str, thing: Any) -> Callable:
-        @face.face_middleware(provides=[name])
-        def middleware(next_: _Middleware) -> _Middleware:
-            return next_(**{name: thing})
-
-        return middleware
-
-    ret_value = {}
-    for key, value in kwargs.items():
-        ret_value[key] = make_middleware(key, value)
-    return ret_value
-
-
-STATIC_MIDDLEWARES = make_middlewares(
-    runner=functools.partial(subprocess.run, capture_output=True, text=True),
-    os_environ=os.environ,
-    current_working_directory=os.getcwd(),
-)
-
-add_cmd = face.Command(add)
-for mw in STATIC_MIDDLEWARES.values():
-    add_cmd.add(mw)
-add_cmd.add("--environment")
-add_cmd.add("--jupyter")
-add_cmd.add("--name")
-
-
-create_cmd = face.Command(create)
-for mw in STATIC_MIDDLEWARES.values():
-    create_cmd.add(mw)
-create_cmd.add("--environment")
-create_cmd.add("--python")
-
-
-def _need_subcommand() -> None:  # pragma: no cover
-    raise face.UsageError("missing subcommand")
-
-
-main_command = face.Command(_need_subcommand, name="pycus")
-main_command.add(add_cmd)
-main_command.add(create_cmd)
+    print(f"✅ Added {environment} as {name} to {jupyter}")

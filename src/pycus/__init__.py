@@ -1,3 +1,4 @@
-from ._version import __version__
+"""Pycus: Manage Jupyter kernels"""
+import importlib.metadata
 
-__all__ = ["__version__"]
+__version__ = importlib.metadata.version(__name__)
